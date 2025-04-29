@@ -1,4 +1,3 @@
-```markdown
 # 🧠 Social Network App (Python + Neo4j)
 
 This is a basic console-based social networking application built using **Python** for the front end and **Neo4j** as the backend graph database. It supports key social features like user registration, following, mutual connection discovery, and friend recommendations — all powered by real-world data.
@@ -87,5 +86,3 @@ MERGE (a)-[:FOLLOWS]->(b);
 ```bash
 python main.py
 ```
-
-
