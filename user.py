@@ -75,6 +75,38 @@ class UserService:
 
     # UC-5: Follow
     def follow_user(self, follower, followee):
+        # check if both the follower and followee exist
+        check_users_query = """
+        MATCH (a:User {username: $follower}), (b:User {username: $followee})
+        RETURN a, b
+        """
+        users = self.conn.execute_query(check_users_query, {"follower": follower, "followee": followee})
+
+        if not users:
+            check_followee_query = "MATCH (b:User {username: $followee}) RETURN b"
+            followee_exists = self.conn.execute_query(check_followee_query, {"followee": followee})
+
+            # case for if user is trying to follow a non-existent user
+            if not followee_exists:
+                print(f"Error: User '{followee}' does not exist. Cannot follow.")
+                return False
+
+            # case for if current user doens't exist... this should never hit
+            print(f"Error: User '{follower}' does not exist. Cannot initiate follow.")
+            return False
+
+
+        # check if relationship already exists (follower -> followee)
+        check_follows_query = """
+        MATCH (:User {username: $follower})-[r:FOLLOWS]->(:User {username: $followee})
+        RETURN r
+        """
+        already_follows = self.conn.execute_query(check_follows_query, {"follower": follower, "followee": followee})
+        if already_follows:
+            print(f"User '{follower}' is already following '{followee}'.")
+            return False
+
+        # if both users exist + relationship doesn't yet exist, create the following relationship
         query = """
         MATCH (a:User {username: $follower}), (b:User {username: $followee})
         MERGE (a)-[:FOLLOWS]->(b)
@@ -85,6 +117,19 @@ class UserService:
 
     # UC-6: Unfollow
     def unfollow_user(self, follower, followee):
+        # check if the relationship (follower -> followee) exists
+        check_follows_query = """
+        MATCH (a:User {username: $follower})-[r:FOLLOWS]->(b:User {username: $followee})
+        RETURN r
+        """
+        relationship_exists = self.conn.execute_query(check_follows_query, {"follower": follower, "followee": followee})
+
+        # case for if the user is trying to unfollow a non-existent user
+        if not relationship_exists:
+            print(f"User '{follower}' is not following '{followee}'. Cannot unfollow.")
+            return False
+
+        # if so, delete it
         query = """
         MATCH (a:User {username: $follower})-[r:FOLLOWS]->(b:User {username: $followee})
         DELETE r
