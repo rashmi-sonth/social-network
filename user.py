@@ -7,6 +7,7 @@ class UserService:
         username = username.strip().lower()
         check_query = "MATCH (u:User {username: $username}) RETURN u"
         if self.conn.execute_query(check_query, {"username": username}):
+            print(f"Error: Username '{username}' already exists.")
             return {"error": "Username already exists."}
 
         create_query = """
@@ -25,6 +26,7 @@ class UserService:
             "name": name,
             "bio": bio
         })
+        print(f"User '{username}' registered successfully.")
         return {"success": True}
 
     # UC-2: Login
@@ -34,6 +36,10 @@ class UserService:
         RETURN u
         """
         result = self.conn.execute_query(query, {"username": username, "password": password})
+        if result:
+            print(f"User '{username}' logged in successfully.")
+        else:
+            print(f"Login failed for user '{username}'. Incorrect username or password.")
         return bool(result)
 
     # UC-3: View Profile
@@ -42,12 +48,19 @@ class UserService:
         result = self.conn.execute_query(query, {"username": username})
         if result:
             user = result[0]["u"]
+            print("\n--- User Profile ---")
+            print("Name:", user.get("name", "N/A"))
+            print("Username:", user.get("username", "N/A"))
+            print("Email:", user.get("email", "N/A"))
+            print("Bio:", user.get("bio", "N/A"))
+            print("--------------------")
             return {
                 "name": user.get("name", ""),
                 "username": user.get("username", ""),
                 "email": user.get("email", ""),
                 "bio": user.get("bio", "")
             }
+        print(f"User '{username}' not found.")
         return {"message": "User not found"}
 
     # UC-4: Edit Profile
@@ -57,6 +70,7 @@ class UserService:
         SET u.name = $name, u.bio = $bio
         """
         self.conn.execute_query(query, {"username": username, "name": new_name, "bio": new_bio})
+        print(f"Profile for user '{username}' updated.")
         return True
 
     # UC-5: Follow
@@ -66,6 +80,7 @@ class UserService:
         MERGE (a)-[:FOLLOWS]->(b)
         """
         self.conn.execute_query(query, {"follower": follower, "followee": followee})
+        print(f"User '{follower}' is now following '{followee}'.")
         return True
 
     # UC-6: Unfollow
@@ -75,6 +90,7 @@ class UserService:
         DELETE r
         """
         self.conn.execute_query(query, {"follower": follower, "followee": followee})
+        print(f"User '{follower}' has unfollowed '{followee}'.")
         return True
 
     # UC-7a: View who you follow
@@ -84,7 +100,15 @@ class UserService:
         RETURN f.username AS following
         """
         results = self.conn.execute_query(query, {"username": username})
-        return [r["following"] for r in results]
+        following_list = [r["following"] for r in results]
+        print(f"\n--- Users followed by '{username}' ---")
+        if following_list:
+            for followed_user in following_list:
+                print(followed_user)
+        else:
+            print(f"'{username}' is not following anyone.")
+        print("-------------------------------------")
+        return following_list
 
     # UC-7b: View your followers
     def view_followers(self, username):
@@ -93,7 +117,15 @@ class UserService:
         RETURN f.username AS follower
         """
         results = self.conn.execute_query(query, {"username": username})
-        return [r["follower"] for r in results]
+        follower_list = [r["follower"] for r in results]
+        print(f"\n--- Followers of '{username}' ---")
+        if follower_list:
+            for follower_user in follower_list:
+                print(follower_user)
+        else:
+            print(f"'{username}' has no followers.")
+        print("-------------------------------")
+        return follower_list
 
     # UC-8: Mutual connections
     def view_mutual_connections(self, user1, user2):
@@ -102,7 +134,15 @@ class UserService:
         RETURN m.username AS mutual
         """
         results = self.conn.execute_query(query, {"user1": user1, "user2": user2})
-        return [r["mutual"] for r in results]
+        mutual_list = [r["mutual"] for r in results]
+        print(f"\n--- Mutual connections between '{user1}' and '{user2}' ---")
+        if mutual_list:
+            for mutual_user in mutual_list:
+                print(mutual_user)
+        else:
+            print(f"No mutual connections found between '{user1}' and '{user2}'.")
+        print("----------------------------------------------------------")
+        return mutual_list
 
     # UC-9: Friend recommendations
     def recommend_users_to_follow(self, username):
@@ -112,7 +152,15 @@ class UserService:
         RETURN DISTINCT rec.username AS recommended LIMIT 5
         """
         results = self.conn.execute_query(query, {"username": username})
-        return [r["recommended"] for r in results]
+        recommendations = [r["recommended"] for r in results]
+        print(f"\n--- User recommendations for '{username}' ---")
+        if recommendations:
+            for recommended_user in recommendations:
+                print(recommended_user)
+        else:
+            print(f"No recommendations found for '{username}' at this time.")
+        print("------------------------------------------")
+        return recommendations
 
     # UC-10: Search users
     def search_users(self, keyword):
@@ -122,7 +170,15 @@ class UserService:
         RETURN u.username AS username, u.name AS name LIMIT 10
         """
         results = self.conn.execute_query(query, {"keyword": keyword})
-        return [{"username": r["username"], "name": r["name"]} for r in results]
+        search_results = [{"username": r["username"], "name": r["name"]} for r in results]
+        print(f"\n--- Search results for '{keyword}' ---")
+        if search_results:
+            for user_info in search_results:
+                print(f"Username: {user_info['username']}, Name: {user_info['name']}")
+        else:
+            print(f"No users found matching '{keyword}'.")
+        print("-----------------------------------")
+        return search_results
 
     # UC-11: Popular users
     def explore_popular_users(self):
@@ -133,4 +189,12 @@ class UserService:
         LIMIT 5
         """
         results = self.conn.execute_query(query)
-        return [{"user": r["user"], "followers": r["followers"]} for r in results]
+        popular_users = [{"user": r["user"], "followers": r["followers"]} for r in results]
+        print("\n--- Popular Users ---")
+        if popular_users:
+            for user_info in popular_users:
+                print(f"User: {user_info['user']}, Followers: {user_info['followers']}")
+        else:
+            print("No popular users found yet.")
+        print("--------------------")
+        return popular_users

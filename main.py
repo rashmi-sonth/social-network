@@ -42,6 +42,7 @@ def main():
                     print("11. Logout")
 
                     action = input("Choose an action: ").strip()
+                    print()
 
                     if action == "1":
                         user_service.view_profile(username)
