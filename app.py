@@ -16,8 +16,19 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 # ─── Sidebar Menu ──────────────────────────────────────────────────
-menu = ["Register", "Login"]
-choice = st.sidebar.selectbox("Choose an action", menu, key="main_menu")
+if not st.session_state.logged_in:
+    menu = ["Register", "Login"]
+    choice = st.sidebar.selectbox("Choose an action", menu, key="main_menu")
+else:
+    st.sidebar.markdown("### Logged in as:")
+    st.sidebar.write(f"👤 {st.session_state.username}")
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.session_state.edit_loaded = False
+        st.session_state.profile_updated = False
+        st.experimental_rerun()
+    choice = "Login"
 
 # ─── UC-1: Register ─────────────────────────────────────────────────
 if choice == "Register":
@@ -47,7 +58,7 @@ elif choice == "Login":
             if user_service.login_user(lu, lp):
                 st.session_state.logged_in = True
                 st.session_state.username = lu
-                st.success(f"✅ Welcome, {lu}!")
+                st.experimental_rerun()
             else:
                 st.error("❌ Login failed. Try again.")
 
@@ -56,9 +67,9 @@ elif choice == "Login":
         st.success(f"✅ Welcome, {username}!")
 
         tabs = st.tabs([
-            "👤 View Profile", "🗘 Edit Profile", "👥 Follow", "🚫 Unfollow",
-            "📍 Following", "👥 Followers", "🔄 Mutual Connections",
-            "💡 Recommendations", "🔍 Search Users", "🔥 Popular Users"
+            "👤 Profile", "✏️ Edit Profile", "👥 Follow", "🚫 Unfollow",
+            "📍 Following", "👥 Followers", "🤝 Mutuals",
+            "💡 Recommendations", "🔍 Search", "🔥 Popular"
         ])
 
         # ─── UC-3: View Profile ──────────────────────────────────────
@@ -66,25 +77,21 @@ elif choice == "Login":
             st.subheader("👤 Your Profile")
 
             if st.session_state.get("profile_updated", False):
-                st.info("🔄 Fetching updated profile…")
+                st.info("Fetching updated profile…")
                 st.session_state.profile_updated = False
 
             profile = user_service.view_profile(username) or {}
             if profile.get("username"):
-                st.markdown(f"""
-                <div style="background:#1e1e1e;padding:20px;border-radius:10px;">
-                  <h4 style="color:#f1f1f1;">👤 <b>{profile['name'] or profile['username']}</b></h4>
-                  <p style="color:#aaa;">📧 <code>{profile['email']}</code></p>
-                  <p style="color:#aaa;">🆔 <code>{profile['username']}</code></p>
-                  <p style="color:#aaa;">📝 {profile['bio'] or "No bio added yet."}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.write("**👤 Name:**", profile['name'] or profile['username'])
+                st.write("**🆔 Username:**", profile['username'])
+                st.write("**📧 Email:**", profile['email'])
+                st.write("**📝 Bio:**", profile['bio'] or "No bio added yet.")
             else:
                 st.error("❌ Profile not found.")
 
         # ─── UC-4: Edit Profile ──────────────────────────────────────
         with tabs[1]:
-            st.subheader("🗘 Edit Profile")
+            st.subheader("✏️ Edit Profile")
 
             # preload once
             if "edit_loaded" not in st.session_state:
@@ -152,7 +159,7 @@ elif choice == "Login":
 
         # ─── UC-8: Mutual Connections ────────────────────────────────
         with tabs[6]:
-            st.subheader("🔄 Mutual Connections")
+            st.subheader("🤝 Mutual Connections")
             other = st.text_input("Compare with username", key="mutual_input")
             if st.button("Find Mutual", key="mutual_btn"):
                 mutuals = user_service.view_mutual_connections(username, other) or []
