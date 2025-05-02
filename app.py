@@ -91,41 +91,80 @@ elif choice == "Login":
 
         # ─── UC-4: Edit Profile ──────────────────────────────────────
         with tabs[1]:
-            st.subheader("✏️ Edit Profile")
-
-            # preload once
-            if "edit_loaded" not in st.session_state:
+            if "edit_loaded" not in st.session_state or not st.session_state.edit_loaded:
                 prof = user_service.view_profile(username) or {}
-                st.session_state.new_name = prof.get("name", "")
-                st.session_state.new_bio  = prof.get("bio", "")
+                st.session_state.current_name = prof.get("name", "")
+                st.session_state.current_bio = prof.get("bio", "")
+                st.session_state.current_email = prof.get("email", "")
                 st.session_state.edit_loaded = True
+                st.experimental_rerun()
 
             name_in = st.text_input(
-                "New Name",
-                value=st.session_state.new_name,
+                "Name",
+                value=st.session_state.get("current_name", ""),
                 key="edit_name",
             )
+            email_in = st.text_input(
+                "Email",
+                 value=st.session_state.get("current_email", ""),
+                 key="edit_email",
+            )
             bio_in = st.text_area(
-                "New Bio",
-                value=st.session_state.new_bio,
+                "Bio",
+                value=st.session_state.get("current_bio", ""),
                 key="edit_bio",
+            )
+            password_in = st.text_input(
+                "New Password (optional)",
+                type="password",
+                key="edit_password",
+                placeholder="Leave blank to keep current password"
             )
 
             if st.button("Update Profile", key="edit_btn"):
+                update_data = {}
+                changed = False
+
                 n = name_in.strip()
+                e = email_in.strip()
                 b = bio_in.strip()
-                if not n and not b:
-                    st.warning("⚠️ Enter name or bio to update.")
+                p = password_in
+
+                # check if values differ from previously loaded ones
+                if n != st.session_state.get("current_name", ""):
+                    update_data["new_name"] = n
+                    changed = True
+                if e != st.session_state.get("current_email", ""):
+                    # clientside check for valid email
+                    if "@" in e or e == "":
+                         update_data["new_email"] = e
+                         changed = True
+                    else:
+                         st.warning("⚠️ Invalid email format entered. Email not updated.")
+                if b != st.session_state.get("current_bio", ""):
+                    update_data["new_bio"] = b
+                    changed = True
+                if p: #only add password if user entered something...
+                    update_data["new_password"] = p
+                    changed = True
+
+                if not changed:
+                    st.info("ℹ️ No changes detected.")
                 else:
-                    # fall back on existing if blank
-                    prof = user_service.view_profile(username) or {}
-                    final_name = n if n else prof.get("name", "")
-                    final_bio  = b if b else prof.get("bio", "")
-                    user_service.edit_profile(username, final_name, final_bio)
-                    st.session_state.new_name = final_name
-                    st.session_state.new_bio  = final_bio
-                    st.session_state.profile_updated = True
-                    st.success("✅ Profile updated.")
+                    success = user_service.edit_profile(username, **update_data)
+
+                    if success:
+                        st.success("✅ Profile updated successfully!")
+                        if "new_name" in update_data:
+                            st.session_state.current_name = update_data["new_name"]
+                        if "new_email" in update_data:
+                            st.session_state.current_email = update_data["new_email"]
+                        if "new_bio" in update_data:
+                            st.session_state.current_bio = update_data["new_bio"]
+                        st.session_state.profile_updated = True
+                        st.experimental_rerun()
+                    else:
+                        st.error("❌ Failed to update profile. Check logs or try again.")
 
         # ─── UC-5: Follow ─────────────────────────────────────────────
         with tabs[2]:

@@ -64,14 +64,50 @@ class UserService:
         return {"message": "User not found"}
 
     # UC-4: Edit Profile
-    def edit_profile(self, username, new_name, new_bio):
-        query = """
-        MATCH (u:User {username: $username})
-        SET u.name = $name, u.bio = $bio
+    def edit_profile(self, username, new_name=None, new_bio=None, new_email=None, new_password=None):
+        set_clauses = []
+        params = {"username": username}
+
+        # in all cases, we allow users to pass an empty string to clear the field
+        if new_name is not None:
+            set_clauses.append("u.name = $name")
+            params["name"] = new_name
+        if new_bio is not None:
+            set_clauses.append("u.bio = $bio")
+            params["bio"] = new_bio
+        if new_email is not None:
+            if "@" in new_email or new_email == "":
+                 set_clauses.append("u.email = $email")
+                 params["email"] = new_email
+            else:
+                 print(f"Warning: Invalid email format '{new_email}' provided. Email not updated.")
+                 pass
+        if new_password is not None and new_password != "": # only update if non-empty password provided
+            set_clauses.append("u.password = $password")
+            params["password"] = new_password # passwords are stored plainly
+
+        # check if we actually make changes
+        if not set_clauses:
+            print(f"No valid fields provided to update for user '{username}'.")
+            return True
+
+        # if there are updates, construct the query + run it
+        query = f"""
+        MATCH (u:User {{username: $username}})
+        SET {', '.join(set_clauses)}
+        RETURN u
         """
-        self.conn.execute_query(query, {"username": username, "name": new_name, "bio": new_bio})
-        print(f"Profile for user '{username}' updated.")
-        return True
+        try:
+            result = self.conn.execute_query(query, params)
+            if result:
+                print(f"Profile for user '{username}' updated successfully.")
+                return True
+            else:
+                print(f"Failed to update profile for user '{username}'.")
+                return False
+        except Exception as e:
+            print(f"Database error during profile update for {username}: {e}")
+            return False
 
     # UC-5: Follow
     def follow_user(self, follower, followee):

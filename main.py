@@ -47,9 +47,36 @@ def main():
                     if action == "1":
                         user_service.view_profile(username)
                     elif action == "2":
-                        new_name = input("Enter new name: ")
-                        new_bio = input("Enter new bio: ")
-                        user_service.edit_profile(username, new_name, new_bio)
+                        print("Leave any field blank to keep its current value.")
+
+                        current_profile = user_service.view_profile(username)  # reuse view_profile method
+                        print(f"Current Name: {current_profile.get('name', 'N/A')}")
+                        print(f"Current Email: {current_profile.get('email', 'N/A')}")
+                        print(f"Current Bio: {current_profile.get('bio', 'N/A')}")
+
+                        new_name_input = input("Enter new name (or press Enter to skip): ").strip()
+                        new_email_input = input("Enter new email (or press Enter to skip): ").strip()
+                        new_bio_input = input("Enter new bio (or press Enter to skip): ").strip()
+                        new_password_input = input("Enter new password (or press Enter to skip): ")
+
+                        name_to_update = new_name_input if new_name_input else None
+                        email_to_update = new_email_input if new_email_input else None
+                        bio_to_update = new_bio_input if new_bio_input else None
+                        password_to_update = new_password_input if new_password_input else None
+
+                        if (name_to_update is None and
+                            email_to_update is None and
+                            bio_to_update is None and
+                            password_to_update is None):
+                            print("No changes entered.")
+                        else:
+                            user_service.edit_profile(
+                                username,
+                                new_name=name_to_update,
+                                new_bio=bio_to_update,
+                                new_email=email_to_update,
+                                new_password=password_to_update
+                            )
                     elif action == "3":
                         target = input("Enter username to follow: ")
                         user_service.follow_user(username, target)
