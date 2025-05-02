@@ -67,10 +67,26 @@ pip install -r requirements.txt
 
 ### 3. Start Neo4j (Desktop)
 - Open Neo4j Desktop
-- Create a new DB (e.g., username: `neo4j`, password: `test1234`)
-- Put `users.csv` and `follows.csv` into your **Neo4j DB's import folder**
-- Run the following Cypher commands in Neo4j Browser:
+- Create a new DBMS
+  - IMPORTANT: our application HARDCODES connection settings in `neo4j_conn.py`
+  ```
+  class Neo4jConnection:
+    def __init__(self, uri="bolt://localhost:7687"):
+        self.driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "password"))
+  ```
+    - We use the default Neo4j URI port of `bolt://localhost:7687`
+    - `auth=basic_auth("neo4j", "password"))` allows us to pass in the database name + the DBMS password
+      - `neo4j` is the default database created in a new DBMS; if you want to use a different database name, change that in  `neo4j_conn.py`
+      - `password` is the DBMS password that you inputted when creating the DBMS. replace this with your actual DBMS password
 
+- Put `users.csv` and `follows.csv` into your **Neo4j DB's import folder**
+  - 1. In Neo4j Desktop, hover over the database you want to use
+  - 2. Then, click the three dots on the right
+  - 3. Click `Open Folder`, and then click `Import`
+  - 4. After importing the files properly, they will appear in the `File` section below the list of databases
+    - This means Neo4j has access to these files, such that they can use them in cypher commands
+
+- Finally, run the following Cypher commands in Neo4j Browser:
 ```cypher
 LOAD CSV WITH HEADERS FROM 'file:///users.csv' AS row
 MERGE (u:User {id: toInteger(row.user_id)})
